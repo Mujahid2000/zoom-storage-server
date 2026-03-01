@@ -38,8 +38,11 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'SaaS File System Backend is running' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}
 
 export { prisma };
+export default app;

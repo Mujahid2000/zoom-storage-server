@@ -3,14 +3,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const emailHost = process.env.EMAIL_HOST || 'smtp.gmail.com';
+
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+    host: emailHost,
+    port: parseInt(process.env.EMAIL_PORT || '465'),
+    secure: process.env.EMAIL_SECURE === 'true' || process.env.EMAIL_PORT === '465',
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    // If using Gmail, 'service' helps bypass some host/port resolution issues natively in Nodemailer
+    ...(emailHost.includes('gmail') && { service: 'gmail' }),
 });
 
 export const sendVerificationEmail = async (to: string, token: string) => {

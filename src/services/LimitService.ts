@@ -1,5 +1,5 @@
 import { prisma } from '../index.js';
-import { FileType } from '@prisma/client';
+import { FileType } from '../../generated/prisma/index.js';
 
 export class LimitService {
     static async getActivePackage(userId: string) {

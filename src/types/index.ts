@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client';
+import { Role } from '../../generated/prisma/index.js';
 
 export interface JWTPayload {
     userId: string;

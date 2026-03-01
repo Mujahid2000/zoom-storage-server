@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma/index.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 

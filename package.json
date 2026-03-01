@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
-    "generate": "prisma generate"
+    "generate": "prisma generate",
+    "build": "prisma generate && tsc"
   },
   "keywords": [],
   "author": "",

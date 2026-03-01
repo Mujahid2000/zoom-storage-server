@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String         @id @default(uuid())
+  email             String         @unique
+  password          String
+  role              Role           @default(USER)
+  createdAt         DateTime       @default(now())
+  isVerified        Boolean        @default(false)
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  verificationToken String?
+  files             File[]
+  folders           Folder[]
+  subscriptions     Subscription[]
+}
+
+model Package {
+  id               String         @id @default(uuid())
+  name             String         @unique
+  price            Float          @default(0)
+  maxFolders       Int
+  maxNestingLevel  Int
+  allowedFileTypes FileType[]
+  maxFileSizeMB    Int
+  totalFileLimit   Int
+  filesPerFolder   Int
+  totalStorageMB   Int            @default(1024)
+  subscriptions    Subscription[]
+}
+
+model Subscription {
+  id        String    @id @default(uuid())
+  userId    String
+  packageId String
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  package   Package   @relation(fields: [packageId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model Folder {
+  id           String   @id @default(uuid())
+  name         String
+  userId       String
+  parentId     String?
+  nestingLevel Int
+  createdAt    DateTime @default(now())
+  files        File[]
+  parent       Folder?  @relation("SubFolders", fields: [parentId], references: [id], onDelete: Cascade)
+  subFolders   Folder[] @relation("SubFolders")
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model File {
+  id        String   @id @default(uuid())
+  name      String
+  size      Int
+  type      FileType
+  folderId  String?
+  userId    String
+  url       String?
+  createdAt DateTime @default(now())
+  folder    Folder?  @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model SystemConfig {
+  id              String   @id @default("system")
+  maintenanceMode Boolean  @default(false)
+  maxUploadSizeMB Int      @default(100)
+  updatedAt       DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum FileType {
+  IMAGE
+  VIDEO
+  PDF
+  AUDIO
+}

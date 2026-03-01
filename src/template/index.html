@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Online</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.95);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(0.95);
+        opacity: 1;
+      }
+    }
+    .pulse-ring {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: '#0f0f0f',
+            card: '#1a1a1a',
+            border: '#2a2a2a',
+            emerald: {
+              400: '#34d399',
+              500: '#10b981'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#0f0f0f] text-white min-h-screen font-sans flex items-center justify-center p-4">
+  <div class="max-w-4xl w-full">
+    <!-- Main Banner Card -->
+    <div class="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-12 text-center">
+      <!-- Status Indicator -->
+      <div class="flex justify-center mb-6">
+        <div class="relative">
+          <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div class="absolute inset-0 bg-emerald-500 rounded-full pulse-ring opacity-30"></div>
+        </div>
+      </div>
+
+      <!-- Server Title -->
+      <h1 class="text-5xl font-bold mb-3 text-balance">Server Online</h1>
+      <p class="text-xl text-neutral-400 mb-8">All systems operational and running smoothly</p>
+
+      <!-- Info Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12">
+        <div class="bg-[#0f0f0f] border border-[#2a2a2a] rounded-lg p-6">
+          <p class="text-sm text-neutral-500 mb-2">Version</p>
+          <p class="text-2xl font-semibold">v2.4.1</p>
+        </div>
+        <div class="bg-[#0f0f0f] border border-[#2a2a2a] rounded-lg p-6">
+          <p class="text-sm text-neutral-500 mb-2">Runtime</p>
+          <p class="text-2xl font-semibold">Node.js</p>
+        </div>
+        <div class="bg-[#0f0f0f] border border-[#2a2a2a] rounded-lg p-6">
+          <p class="text-sm text-neutral-500 mb-2">Uptime</p>
+          <p class="text-2xl font-semibold" id="uptime">47d 12h</p>
+        </div>
+      </div>
+
+      <!-- Timestamp -->
+      <div class="mt-8 pt-6 border-t border-[#2a2a2a]">
+        <p class="text-sm text-neutral-500">
+          <span id="timestamp">Loading...</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer Links -->
+    <div class="flex justify-center gap-8 mt-6 text-sm text-neutral-500">
+      <a href="/api" class="hover:text-white transition-colors">API</a>
+      <a href="/docs" class="hover:text-white transition-colors">Documentation</a>
+      <a href="/status" class="hover:text-white transition-colors">Status</a>
+    </div>
+  </div>
+
+  <script>
+    // Update timestamp
+    function updateTimestamp() {
+      const now = new Date();
+      const options = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit',
+        timeZoneName: 'short'
+      };
+      document.getElementById('timestamp').textContent = now.toLocaleString('en-US', options);
+    }
+    
+    updateTimestamp();
+    setInterval(updateTimestamp, 1000);
+  </script>
+</body>
+</html>

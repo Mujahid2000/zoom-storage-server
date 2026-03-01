@@ -35,20 +35,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api', routes);
-const CSS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css';
-
-app.use(
-    '/api-docs',
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, {
-        explorer: true,
-        customCssUrl: CSS_URL,
-        customJs: [
-            'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-bundle.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-standalone-preset.js',
-        ],
-    })
-);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'SaaS File System Backend is running' });

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../index.js';
 import { LimitService } from '../services/LimitService.js';
-import { FileType } from '../../generated/prisma/index.js';
+import { FileType } from '@prisma/client';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 

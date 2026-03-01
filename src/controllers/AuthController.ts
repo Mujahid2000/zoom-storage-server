@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '../index.js';
-import { Role } from '../../generated/prisma/index.js';
+import { Role } from '@prisma/client';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';

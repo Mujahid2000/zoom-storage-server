@@ -236,7 +236,8 @@ router.post('/auth/reset-password', AuthController.resetPassword);
  *         description: Server error
  */
 // Packages
-router.get('/packages', PackageController.getAllPackages);
+router.get('/packages/all', PackageController.getAllPackages);
+router.get('/packages/public', PackageController.getPublicPackages);
 
 /**
  * @swagger

@@ -4,10 +4,22 @@ import { asyncHandler } from '../utils/AsyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 
 export const getAllPackages = asyncHandler(async (req: Request, res: Response) => {
-    const packages = await prisma.package.findMany();
+    const packages = await prisma.package.findMany({
+        orderBy: { price: 'asc' }
+    });
 
     return res.status(200).json(
         new ApiResponse(200, packages, 'Packages fetched successfully')
+    );
+});
+
+export const getPublicPackages = asyncHandler(async (req: Request, res: Response) => {
+    const packages = await prisma.package.findMany({
+        orderBy: { price: 'asc' }
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, packages, 'Public packages fetched successfully')
     );
 });
 

@@ -1,56 +1,54 @@
 import { Request, Response } from 'express';
 import { prisma } from '../index.js';
+import { asyncHandler } from '../utils/AsyncHandler.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 
-export const getCurrentSubscription = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user!.userId;
-        const subscription = await prisma.subscription.findFirst({
-            where: { userId, endDate: null },
-            include: { package: true },
-            orderBy: { startDate: 'desc' },
-        });
-        res.json(subscription);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch subscription' });
-    }
-};
+export const getCurrentSubscription = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const subscription = await prisma.subscription.findFirst({
+        where: { userId, endDate: null },
+        include: { package: true },
+        orderBy: { startDate: 'desc' },
+    });
 
-export const updateSubscription = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user!.userId;
-        const { packageId } = req.body;
+    return res.status(200).json(
+        new ApiResponse(200, subscription, 'Current subscription fetched successfully')
+    );
+});
 
-        // End current subscription
-        await prisma.subscription.updateMany({
-            where: { userId, endDate: null },
-            data: { endDate: new Date() },
-        });
+export const updateSubscription = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const { packageId } = req.body;
 
-        // Start new subscription
-        const subscription = await prisma.subscription.create({
-            data: {
-                userId,
-                packageId,
-            },
-            include: { package: true },
-        });
+    // End current subscription
+    await prisma.subscription.updateMany({
+        where: { userId, endDate: null },
+        data: { endDate: new Date() },
+    });
 
-        res.json(subscription);
-    } catch (err) {
-        res.status(400).json({ error: 'Failed to update subscription' });
-    }
-};
+    // Start new subscription
+    const subscription = await prisma.subscription.create({
+        data: {
+            userId,
+            packageId,
+        },
+        include: { package: true },
+    });
 
-export const getSubscriptionHistory = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user!.userId;
-        const history = await prisma.subscription.findMany({
-            where: { userId },
-            include: { package: true },
-            orderBy: { startDate: 'desc' },
-        });
-        res.json(history);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch history' });
-    }
-};
+    return res.status(200).json(
+        new ApiResponse(200, subscription, 'Subscription updated successfully')
+    );
+});
+
+export const getSubscriptionHistory = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const history = await prisma.subscription.findMany({
+        where: { userId },
+        include: { package: true },
+        orderBy: { startDate: 'desc' },
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, history, 'Subscription history fetched successfully')
+    );
+});

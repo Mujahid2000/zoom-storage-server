@@ -5,176 +5,184 @@ import crypto from 'crypto';
 import { prisma } from '../index.js';
 import { Role } from '@prisma/client';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email.js';
+import { asyncHandler } from '../utils/AsyncHandler.js';
+import { ApiError } from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
-export const register = async (req: Request, res: Response) => {
-    try {
-        const { email, password } = req.body;
+export const register = asyncHandler(async (req: Request, res: Response) => {
+    const { email, password } = req.body;
 
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) return res.status(400).json({ error: 'Email already exists' });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+        throw new ApiError(400, 'Email already exists');
+    }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
 
-        const user = await prisma.user.create({
+    const user = await prisma.user.create({
+        data: {
+            email,
+            password: hashedPassword,
+            role: Role.USER, // Default to USER
+            verificationToken,
+        },
+    });
+
+    // Automatically assign "Free" package to new users
+    const freePackage = await prisma.package.findUnique({ where: { name: 'Free' } });
+    if (freePackage) {
+        await prisma.subscription.create({
             data: {
-                email,
-                password: hashedPassword,
-                role: Role.USER, // Default to USER
-                verificationToken,
+                userId: user.id,
+                packageId: freePackage.id,
             },
         });
+    }
 
-        // Automatically assign "Free" package to new users
-        const freePackage = await prisma.package.findUnique({ where: { name: 'Free' } });
-        if (freePackage) {
-            await prisma.subscription.create({
-                data: {
-                    userId: user.id,
-                    packageId: freePackage.id,
-                },
-            });
-        }
+    // SEND ACTUAL VERIFICATION EMAIL
+    await sendVerificationEmail(email, verificationToken);
 
-        // SEND ACTUAL VERIFICATION EMAIL
-        await sendVerificationEmail(email, verificationToken);
-
-        res.status(201).json({
-            message: 'User created successfully. Please verify your email.',
+    return res.status(201).json(
+        new ApiResponse(201, {
             user: { id: user.id, email: user.email },
             verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
+        }, 'User created successfully. Please verify your email.')
+    );
+});
+
+export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+    const { token } = req.body;
+    if (!token) {
+        throw new ApiError(400, 'Token is required');
     }
-};
 
-export const verifyEmail = async (req: Request, res: Response) => {
-    try {
-        const { token } = req.body;
-        if (!token) return res.status(400).json({ error: 'Token is required' });
+    const user = await prisma.user.findFirst({
+        where: { verificationToken: token },
+    });
 
-        const user = await prisma.user.findFirst({
-            where: { verificationToken: token },
-        });
-
-        if (!user) return res.status(400).json({ error: 'Invalid or expired token' });
-
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                isVerified: true,
-                verificationToken: null,
-            },
-        });
-
-        res.json({ message: 'Email verified successfully!' });
-    } catch (err) {
-        res.status(500).json({ error: 'Verification failed' });
+    if (!user) {
+        throw new ApiError(400, 'Invalid or expired token');
     }
-};
 
-export const resendVerification = async (req: Request, res: Response) => {
-    try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email is required' });
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            isVerified: true,
+            verificationToken: null,
+        },
+    });
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        if (user.isVerified) return res.status(400).json({ error: 'Email is already verified' });
+    return res.status(200).json(
+        new ApiResponse(200, null, 'Email verified successfully!')
+    );
+});
 
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { verificationToken }
-        });
+export const resendVerification = asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body;
+    if (!email) {
+        throw new ApiError(400, 'Email is required');
+    }
 
-        // SEND ACTUAL VERIFICATION EMAIL
-        await sendVerificationEmail(email, verificationToken);
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+    if (user.isVerified) {
+        throw new ApiError(400, 'Email is already verified');
+    }
 
-        res.json({
-            message: 'Verification email sent successfully.',
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { verificationToken }
+    });
+
+    // SEND ACTUAL VERIFICATION EMAIL
+    await sendVerificationEmail(email, verificationToken);
+
+    return res.status(200).json(
+        new ApiResponse(200, {
             verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to resend verification email' });
+        }, 'Verification email sent successfully.')
+    );
+});
+
+export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+        throw new ApiError(404, 'User not found');
     }
-};
 
-export const forgotPassword = async (req: Request, res: Response) => {
-    try {
-        const { email } = req.body;
-        const user = await prisma.user.findUnique({ where: { email } });
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
-        if (!user) return res.status(404).json({ error: 'User not found' });
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { resetToken, resetTokenExpiry },
+    });
 
-        const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+    // SEND ACTUAL PASSWORD RESET EMAIL
+    await sendPasswordResetEmail(email, resetToken);
 
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { resetToken, resetTokenExpiry },
-        });
+    return res.status(200).json(
+        new ApiResponse(200, null, 'Password reset link sent to your email.')
+    );
+});
 
-        // SEND ACTUAL PASSWORD RESET EMAIL
-        await sendPasswordResetEmail(email, resetToken);
+export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+    const { token, newPassword } = req.body;
+    const user = await prisma.user.findFirst({
+        where: {
+            resetToken: token,
+            resetTokenExpiry: { gt: new Date() },
+        },
+    });
 
-        res.json({ message: 'Password reset link sent to your email.' });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to process request' });
+    if (!user) {
+        throw new ApiError(400, 'Invalid or expired token');
     }
-};
 
-export const resetPassword = async (req: Request, res: Response) => {
-    try {
-        const { token, newPassword } = req.body;
-        const user = await prisma.user.findFirst({
-            where: {
-                resetToken: token,
-                resetTokenExpiry: { gt: new Date() },
-            },
-        });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        if (!user) return res.status(400).json({ error: 'Invalid or expired token' });
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            password: hashedPassword,
+            resetToken: null,
+            resetTokenExpiry: null,
+        },
+    });
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+    return res.status(200).json(
+        new ApiResponse(200, null, 'Password reset successfully!')
+    );
+});
 
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                password: hashedPassword,
-                resetToken: null,
-                resetTokenExpiry: null,
-            },
-        });
+export const login = asyncHandler(async (req: Request, res: Response) => {
+    const { email, password } = req.body;
 
-        res.json({ message: 'Password reset successfully!' });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to reset password' });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+        throw new ApiError(400, 'Invalid credentials');
     }
-};
 
-export const login = async (req: Request, res: Response) => {
-    // ... existing login logic with verification check
-    try {
-        const { email, password } = req.body;
-
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-
-        if (!user.isVerified) return res.status(403).json({ error: 'Please verify your email first' });
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
-
-        const token = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
-    } catch (err) {
-        res.status(500).json({ error: 'Internal server error' });
+    if (!user.isVerified) {
+        throw new ApiError(403, 'Please verify your email first');
     }
-};
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+        throw new ApiError(400, 'Invalid credentials');
+    }
+
+    const token = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+
+    return res.status(200).json(
+        new ApiResponse(200, { token, user: { id: user.id, email: user.email, role: user.role } }, 'Login successful')
+    );
+});

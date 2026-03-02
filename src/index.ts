@@ -41,6 +41,26 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'SaaS File System Backend is running' });
 });
 
+// Global error handling middleware
+import { ApiError } from './utils/ApiError.js';
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err instanceof ApiError) {
+        return res.status(err.statusCode).json({
+            success: err.success,
+            message: err.message,
+            errors: err.errors,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
+    }
+
+    return res.status(500).json({
+        success: false,
+        message: 'Internal Server Error',
+        errors: [],
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
+
 if (!process.env.VERCEL) {
     app.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);

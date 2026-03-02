@@ -8,12 +8,13 @@ export class LimitService {
             include: { package: true },
             orderBy: { startDate: 'desc' },
         });
-        return subscription?.package;
+        return subscription;
     }
 
     static async canCreateFolder(userId: string, parentId: string | null) {
-        const pkg = await this.getActivePackage(userId);
-        if (!pkg) return { allowed: false, error: 'No active subscription' };
+        const sub = await this.getActivePackage(userId);
+        if (!sub) return { allowed: false, error: 'No active subscription' };
+        const pkg = sub.package;
 
         // Max Folders
         const folderCount = await prisma.folder.count({ where: { userId } });
@@ -32,8 +33,9 @@ export class LimitService {
     }
 
     static async canUploadFile(userId: string, folderId: string | null, fileSizeMB: number, fileType: FileType) {
-        const pkg = await this.getActivePackage(userId);
-        if (!pkg) return { allowed: false, error: 'No active subscription' };
+        const sub = await this.getActivePackage(userId);
+        if (!sub) return { allowed: false, error: 'No active subscription' };
+        const pkg = sub.package;
 
         // Allowed File Types
         if (!pkg.allowedFileTypes.includes(fileType)) return { allowed: false, error: 'File type not allowed' };

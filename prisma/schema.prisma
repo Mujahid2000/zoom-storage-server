@@ -36,13 +36,14 @@ model Package {
 }
 
 model Subscription {
-  id        String    @id @default(uuid())
-  userId    String
-  packageId String
-  startDate DateTime  @default(now())
-  endDate   DateTime?
-  package   Package   @relation(fields: [packageId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
+  id         String    @id @default(uuid())
+  userId     String
+  packageId  String
+  startDate  DateTime  @default(now())
+  endDate    DateTime?
+  expiryDate DateTime?
+  package    Package   @relation(fields: [packageId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
 }
 
 model Folder {

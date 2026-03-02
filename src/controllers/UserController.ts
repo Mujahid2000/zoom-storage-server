@@ -8,9 +8,9 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 export const getUsageStats = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
 
-    // Get current package
-    const pkg = await LimitService.getActivePackage(userId);
-    if (!pkg) {
+    // Get current subscription
+    const sub = await LimitService.getActivePackage(userId);
+    if (!sub) {
         throw new ApiError(404, 'No active subscription found');
     }
 
@@ -26,12 +26,13 @@ export const getUsageStats = asyncHandler(async (req: Request, res: Response) =>
 
     return res.status(200).json(
         new ApiResponse(200, {
-            package: pkg,
+            subscription: sub,
+            package: sub.package,
             usage: {
                 files: fileCount,
                 folders: folderCount,
                 storageMB: Number(totalSizeMB.toFixed(2)),
-                storagePercent: Math.min(100, (totalSizeMB / (pkg as any).totalStorageMB) * 100)
+                storagePercent: Math.min(100, (totalSizeMB / (sub.package as any).totalStorageMB) * 100)
             }
         }, "Usage stats fetched successfully")
     );

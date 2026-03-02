@@ -27,10 +27,14 @@ export const updateSubscription = asyncHandler(async (req: Request, res: Respons
     });
 
     // Start new subscription
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30); // 30 days default
+
     const subscription = await prisma.subscription.create({
         data: {
             userId,
             packageId,
+            expiryDate,
         },
         include: { package: true },
     });

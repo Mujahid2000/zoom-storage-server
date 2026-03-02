@@ -7,6 +7,7 @@ import * as SubscriptionController from '../controllers/SubscriptionController.j
 import * as UserController from '../controllers/UserController.js';
 import * as SystemConfigController from '../controllers/SystemConfigController.js';
 import { authenticate, isAdmin, checkMaintenance } from '../middleware/AuthMiddleware.js';
+import { checkSubscriptionStatus } from '../middleware/SubscriptionMiddleware.js';
 import upload from '../middleware/UploadMiddleware.js';
 
 const router = Router();
@@ -431,7 +432,7 @@ router.get('/folders', authenticate, FolderController.getFolders);
  *       500:
  *         description: Server error
  */
-router.post('/folders', authenticate, FolderController.createFolder);
+router.post('/folders', authenticate, checkSubscriptionStatus, FolderController.createFolder);
 
 /**
  * @swagger
@@ -466,7 +467,7 @@ router.post('/folders', authenticate, FolderController.createFolder);
  *       500:
  *         description: Server error
  */
-router.put('/folders/:id', authenticate, FolderController.renameFolder);
+router.put('/folders/:id', authenticate, checkSubscriptionStatus, FolderController.renameFolder);
 
 /**
  * @swagger
@@ -490,7 +491,7 @@ router.put('/folders/:id', authenticate, FolderController.renameFolder);
  *       500:
  *         description: Server error
  */
-router.delete('/folders/:id', authenticate, FolderController.deleteFolder);
+router.delete('/folders/:id', authenticate, checkSubscriptionStatus, FolderController.deleteFolder);
 
 /**
  * @swagger
@@ -575,7 +576,7 @@ router.get('/files', authenticate, FileController.getFiles);
  *       500:
  *         description: Server error
  */
-router.post('/files', authenticate, upload.single('file'), FileController.uploadFile);
+router.post('/files', authenticate, checkSubscriptionStatus, upload.single('file'), FileController.uploadFile);
 
 /**
  * @swagger
@@ -610,7 +611,7 @@ router.post('/files', authenticate, upload.single('file'), FileController.upload
  *       500:
  *         description: Server error
  */
-router.put('/files/:id', authenticate, FileController.renameFile);
+router.put('/files/:id', authenticate, checkSubscriptionStatus, FileController.renameFile);
 
 /**
  * @swagger
@@ -634,7 +635,7 @@ router.put('/files/:id', authenticate, FileController.renameFile);
  *       500:
  *         description: Server error
  */
-router.delete('/files/:id', authenticate, FileController.deleteFile);
+router.delete('/files/:id', authenticate, checkSubscriptionStatus, FileController.deleteFile);
 
 /**
  * @swagger

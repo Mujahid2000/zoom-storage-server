@@ -34,10 +34,15 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     // Automatically assign "Free" package to new users
     const freePackage = await prisma.package.findUnique({ where: { name: 'Free' } });
     if (freePackage) {
+        // Set expiry date to 1 year from now
+        const expiryDate = new Date();
+        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
         await prisma.subscription.create({
             data: {
                 userId: user.id,
                 packageId: freePackage.id,
+                expiryDate: expiryDate,
             },
         });
     }

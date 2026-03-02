@@ -8,6 +8,13 @@ import { asyncHandler } from '../utils/AsyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 
+const normalizeFolderId = (id: any): string | null => {
+    if (id === undefined || id === null || id === 'undefined' || id === 'null' || id === '') {
+        return null;
+    }
+    return id as string;
+};
+
 export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const fileData = req.file;
@@ -17,6 +24,8 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
     }
 
     const { folderId } = req.body;
+    const normalizedFolderId = normalizeFolderId(folderId);
+    console.log(`[uploadFile] User: ${userId}, Request folderId: ${folderId}, Normalized: ${normalizedFolderId}`);
 
     let type: FileType = FileType.IMAGE;
     if (fileData.mimetype.startsWith('video/')) type = FileType.VIDEO;
@@ -33,7 +42,7 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
         throw new ApiError(403, `File exceeds global limit of ${config.maxUploadSizeMB} MB`);
     }
 
-    const limitCheck = await LimitService.canUploadFile(userId, folderId || null, fileSizeMB, type as FileType);
+    const limitCheck = await LimitService.canUploadFile(userId, normalizedFolderId, fileSizeMB, type as FileType);
     if (!limitCheck.allowed) {
         throw new ApiError(403, limitCheck.error || "Upload limit exceeded");
     }
@@ -45,7 +54,7 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
             type,
             url,
             user: { connect: { id: userId } },
-            ...(folderId ? { folder: { connect: { id: folderId } } } : {}),
+            ...(normalizedFolderId ? { folder: { connect: { id: normalizedFolderId } } } : {}),
         },
     });
 
@@ -56,10 +65,19 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
 
 export const getFiles = asyncHandler(async (req: Request, res: Response) => {
     const { folderId } = req.query;
+
+    // Explicitly handle root vs nested folder filtering
+    // Prisma will skip the filter if we pass undefined, so we must force null for root
+    const normalizedFolderId = (folderId === undefined || folderId === 'undefined' || folderId === 'null' || folderId === '')
+        ? null
+        : (folderId as string);
+
+    console.log(`[getFiles] User: ${req.user!.userId}, Query folderId: ${folderId}, Normalized: ${normalizedFolderId}`);
+
     const files = await prisma.file.findMany({
         where: {
             userId: req.user!.userId,
-            folderId: folderId as string
+            folderId: normalizedFolderId
         },
     });
 

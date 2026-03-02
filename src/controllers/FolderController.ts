@@ -5,20 +5,30 @@ import { asyncHandler } from '../utils/AsyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 
+const normalizeFolderId = (id: any): string | null => {
+    if (id === undefined || id === null || id === 'undefined' || id === 'null' || id === '') {
+        return null;
+    }
+    return id as string;
+};
+
 export const createFolder = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const { name, parentId } = req.body;
+    const normalizedParentId = normalizeFolderId(parentId);
 
-    const limitCheck = await LimitService.canCreateFolder(userId, parentId);
+    const limitCheck = await LimitService.canCreateFolder(userId, normalizedParentId);
     if (!limitCheck.allowed) {
         throw new ApiError(403, limitCheck.error || "Folder creation limit exceeded");
     }
+
+    console.log(`[createFolder] User: ${userId}, Request parentId: ${parentId}, Normalized: ${normalizedParentId}`);
 
     const folder = await prisma.folder.create({
         data: {
             name,
             userId,
-            parentId,
+            parentId: normalizedParentId,
             nestingLevel: limitCheck.nestingLevel!,
         },
     });
@@ -32,10 +42,17 @@ export const getFolders = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const { parentId } = req.query;
 
+    // Explicitly handle root vs nested folder filtering
+    const normalizedParentId = (parentId === undefined || parentId === 'undefined' || parentId === 'null' || parentId === '')
+        ? null
+        : (parentId as string);
+
+    console.log(`[getFolders] User: ${userId}, Query parentId: ${parentId}, Normalized: ${normalizedParentId}`);
+
     const folders = await prisma.folder.findMany({
         where: {
             userId,
-            parentId: parentId ? (parentId as string) : null
+            parentId: normalizedParentId
         },
         include: { _count: { select: { subFolders: true, files: true } } }
     });

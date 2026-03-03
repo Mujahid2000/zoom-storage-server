@@ -20,7 +20,27 @@ export const updateSubscription = asyncHandler(async (req: Request, res: Respons
     const userId = req.user!.userId;
     const { packageId } = req.body;
 
-    // End current subscription
+    // 1. Check if user already has a subscription within the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const recentSubscription = await prisma.subscription.findFirst({
+        where: {
+            userId,
+            startDate: {
+                gte: thirtyDaysAgo
+            }
+        },
+        orderBy: { startDate: 'desc' }
+    });
+
+    if (recentSubscription) {
+        return res.status(400).json(
+            new ApiResponse(400, null, 'You can only purchase or update a package once every 30 days.')
+        );
+    }
+
+    // End current active subscription if any
     await prisma.subscription.updateMany({
         where: { userId, endDate: null },
         data: { endDate: new Date() },
@@ -28,7 +48,7 @@ export const updateSubscription = asyncHandler(async (req: Request, res: Respons
 
     // Start new subscription
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 30); // 30 days default
+    expiryDate.setDate(expiryDate.getDate() + 30); // 30 days expiry
 
     const subscription = await prisma.subscription.create({
         data: {
